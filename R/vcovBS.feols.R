@@ -1,4 +1,4 @@
-vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FALSE, use = "pairwise.complete.obs", applyfun = NULL, cores = NULL, qrjoint = FALSE, center = "mean")
+vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FALSE, use = "pairwise.complete.obs", applyfun = NULL, cores = NULL, center = "mean")
 {
   ## set up return value with correct dimension and names
   cf0 <- coef(x)
@@ -131,13 +131,13 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
         j <- unlist(cli[sample(names(cli), length(cli), replace = TRUE)])
         yboot <- xfit$fit + xfit$res[j]
         yboot <- (yboot - off) * sqrt(wts)
-	if(qrjoint) yboot else qr.coef(xfit$qr, yboot)
+	qr.coef(xfit$qr, yboot)
       },
       function(j, ...) {
         j <- wild(nlevels(cli))
         yboot <- xfit$fit + xfit$res * j[cli]
         yboot <- (yboot - off) * sqrt(wts)
-	if(qrjoint) yboot else qr.coef(xfit$qr, yboot)
+	qr.coef(xfit$qr, yboot)
       }
     )
 
@@ -153,7 +153,7 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
       center <- match.arg(center, c("mean", "estimate"))
       rval <- rval + sign[i] * (R - 1L)/R * tcrossprod(cf - if(center == "mean") rowMeans(cf) else cf0)
     } else {
-      cf <- if(qrjoint && type != "xy") t(qr.coef(xfit$qr, do.call("cbind", cf))) else do.call("rbind", cf)
+      cf <- do.call("rbind", cf)
       rval <- rval + sign[i] * cov(cf, use = use)
     }
   }
