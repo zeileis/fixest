@@ -1,3 +1,33 @@
+#' (Clustered) bootstrap covariance matrices for fixed-effects OLS
+#'
+#' S3 method for \code{\link[sandwich]{vcovBS}} based on \code{\link{feols}},
+#' using an efficient implementation of various flavors of bootstrap covariances.
+#'
+#' @param x a fitted \code{\link{feols}} object.
+#' @param cluster a variable indicating the clustering of observations, a \code{list} (or \code{data.frame}) thereof, or a formula specifying which variables from the fitted model should be used (see examples). By default (\code{cluster = NULL}), every observation is assumed to be its own cluster.
+#' @param R integer. Number of bootstrap replications.
+#' @param type character (or function). The character string specifies the type of bootstrap to use: \code{"xy"} for case-based bootstrap, \code{"fractional"} for fractional bootstrap, \code{"jackknife"} for jackknife (leave-one-out) estimation, \code{"residual"} for residual based bootstrap, or various wild bootstrap flavors. Specifically, there are \code{"wild"} (or equivalently: \code{"wild-rademacher"} or \code{"rademacher"}), \code{"mammen"} (or \code{"wild-mammen"}), \code{"norm"} (or \code{"wild-norm"}), \code{"webb"} (or \code{"wild-webb"}), or a user-defined wild bootstrap if \code{type} is a \code{function(n)} for drawing wild bootstrap factors.
+#' @param \dots arguments passed to the model fitting function.
+#' @param fix logical. Should the covariance matrix be fixed to be positive semi-definite in case it is not?
+#' @param use character. Specification passed to \code{\link[stats]{cov}} for handling missing coefficients/parameters.
+#' @param applyfun an optional \code{\link[base]{lapply}}-style function with arguments \code{function(X, FUN, \dots)}. It is used for refitting the model to the bootstrap samples. The default is to use the basic \code{lapply} function unless the \code{cores} argument is specified (see below).
+#' @param cores numeric. If set to an integer the \code{applyfun} is set to \code{\link[parallel]{mclapply}} with the desired number of \code{cores}, except on Windows where \code{\link[parallel]{parLapply}} with \code{makeCluster(cores)} is used.
+#' @param center character. For \code{type = "jackknife"} the coefficients from all jacknife samples (each dropping one observational unit/cluster) can be centered by their \code{"mean"} (default) or by the original full-sample \code{"estimate"}.
+#'
+#' @details
+#' FIXME: Write up short summary of (a) what flavors are available and (b) which computational tricks are used. For further details and references refer to vcovBS in sandwich.
+#'
+#' @return
+#' A matrix containing the covariance matrix estimate.
+#'
+#' @seealso
+#' \code{\link[sandwich]{vcovBS}}, \code{\link{feols}}
+#'
+#' @importFrom stats .lm.fit coef nobs cov model.frame model.matrix model.response expand.model.frame rnorm
+#' @importFrom parallel makeCluster stopCluster parLapply mclapply
+#'
+#' @method vcovBS feols
+
 vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FALSE, use = "pairwise.complete.obs", applyfun = NULL, cores = NULL, center = "mean")
 {
   ## set up return value with correct dimension and names
@@ -7,8 +37,8 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
   rval <- matrix(0, nrow = k, ncol = k, dimnames = list(names(cf0), names(cf0)))
 
   ## cluster can either be supplied explicitly or
-  ## be an attribute of the model...FIXME: other specifications?
-  if (is.null(cluster)) cluster <- attr(x, "cluster")
+  ## FIXME: Laurent, should there be some default cluster specification based on the feols object?
+  if (is.null(cluster)) cluster <- NULL ## FIXME?
 
   ## resort to cross-section if no clusters are supplied
   if (is.null(cluster)) cluster <- 1L:n
