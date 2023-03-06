@@ -15,7 +15,7 @@
 #' @param center character. For \code{type = "jackknife"} the coefficients from all jacknife samples (each dropping one observational unit/cluster) can be centered by their \code{"mean"} (default) or by the original full-sample \code{"estimate"}.
 #'
 #' @details
-#' FIXME: Write up short summary of (a) what flavors are available and (b) which computational tricks are used. For further details and references refer to vcovBS in sandwich.
+#' NOTE: Write up short summary of (a) what flavors are available and (b) which computational tricks are used. For further details and references refer to vcovBS in sandwich.
 #'
 #' @return
 #' A matrix containing the covariance matrix estimate.
@@ -28,6 +28,7 @@
 #'
 #' @method vcovBS feols
 
+## NOTE: So far the function is deliberately called vcovBS.feols because it is intended for feols output. Later on we can add the actual vcovBS.fixest method that dispatched to the internal vcovBS.feols if appropriate and otherwise call vcovBS.default.
 vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FALSE, use = "pairwise.complete.obs", applyfun = NULL, cores = NULL, center = "mean")
 {
   ## set up return value with correct dimension and names
@@ -45,7 +46,7 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
 
   ## collect 'cluster' variables in a data frame
   if(inherits(cluster, "formula")) {
-    cluster_tmp <- if("Formula" %in% loadedNamespaces()) { ## FIXME to suppress potential warnings due to | in Formula
+    cluster_tmp <- if("Formula" %in% loadedNamespaces()) { ## NOTE: this is to suppress potential warnings due to | in Formula
       suppressWarnings(expand.model.frame(x, cluster, na.expand = FALSE))
     } else {
       expand.model.frame(x, cluster, na.expand = FALSE)
@@ -102,6 +103,7 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
   )
 
   ## model information: original response, weights, and design matrix or the corresponding fitted/residuals/QR
+  ## FIXME: Laurent, a simple first step might be to just extract these (or similar) quantities from fixest
   y <- if(!is.null(x$y)) {
     x$y
   } else if(!is.null(x$model)) {
@@ -143,6 +145,7 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
     } 
 
     ## bootstrap fitting function
+    ## FIXME: Laurent, in each of these cases I guess that there is a counterpart for model fitting via fixest, possibly with more explicit handling of weights and offset (below is rather compact for speed)
     bootfit <- switch(type,
       "xy" = function(j, ...) {
         j <- unlist(cli[sample(names(cli), length(cli), replace = TRUE)])
@@ -188,7 +191,7 @@ vcovBS.feols <- function(x, cluster = NULL, R = 250, type = "xy", ..., fix = FAL
     }
   }
 
-  ## check (and fix) if sandwich is not positive semi-definite
+  ## check (and fix) if covariance is not positive semi-definite
   if(fix && any((eig <- eigen(rval, symmetric = TRUE))$values < 0)) {
     eig$values <- pmax(eig$values, 0)
     rval[] <- crossprod(sqrt(eig$values) * t(eig$vectors))
